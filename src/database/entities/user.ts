@@ -9,8 +9,11 @@ export default class User {
   @PrimaryColumn({ name: 'email', type: 'varchar', length: 255, unique: true })
   email?: string;
 
-  @Column({ name: 'password', type: 'varchar', length: 100, select: false })
-  password: string;
+  @Column({ name: 'verificationCode', type: 'varchar', length: 255 })
+  verificationCode: string;
+
+  @Column({ name: 'password', type: 'varchar', length: 100, select: false, default: '' })
+  password?: string;
 
   @Column({
     name: 'status',
