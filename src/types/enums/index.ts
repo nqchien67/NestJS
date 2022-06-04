@@ -1,6 +1,7 @@
 export enum ErrorCode {
   Unknown_Error = 'Unknown_Error',
   Not_Found = 'Not_Found',
+  Email_Already_exist = 'Email_Already_exist',
   The_Allowed_Number_Of_Calls_Has_Been_Exceeded = 'The_Allowed_Number_Of_Calls_Has_Been_Exceeded',
   Verify_Token_Fail = 'Verify_Token_Fail',
   Validate_fail = 'Validate_fail',

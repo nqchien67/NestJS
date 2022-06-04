@@ -2,6 +2,7 @@ import { AuthService } from '$app/shared/auth/auth.service';
 import User from '$database/entities/user';
 import { CustomHttpException } from '$helpers/exception';
 import { CommonStatus, ErrorCode, UserType } from '$types/enums';
+import config from '$config';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Connection, Repository } from 'typeorm';
@@ -9,15 +10,17 @@ import * as bcrypt from 'bcrypt';
 
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { MailService } from '$app/shared/send-mail/mail.service';
+import { SendVerificationCodeDTO } from './dto/sendVerificationCode.dto';
 
 @Injectable()
 export class ClientService {
   constructor(
     private readonly connection: Connection,
     private readonly authService: AuthService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly mailService: MailService, // @InjectRepository(User) // private readonly userRepository: Repository<User>,
   ) {}
+
   async login(params: LoginDto) {
     const { email, password } = params;
 
@@ -53,7 +56,57 @@ export class ClientService {
     return await this.connection.transaction(async (transaction) => {
       const userRepository = transaction.getRepository(User);
 
-      
+      const user = await userRepository.findOne({
+        where: { email },
+        select: ['verificationCode'],
+      });
+
+      if (user.verificationCode !== code) {
+        throw new CustomHttpException(ErrorCode.Auth_Failed, 'Auth_Failed');
+      }
+
+      const hashPassword = await bcrypt.hash(password, config.AUTH.BCRYPT_HASH_ROUNDS);
+      userRepository.update(
+        { email },
+        {
+          password: hashPassword,
+          verificationCode: '',
+          status: CommonStatus.ACTIVE,
+        },
+      );
+
+      return await this.generateToken(userRepository, user);
+    });
+  }
+
+  async sendVerificationCode(params: SendVerificationCodeDTO) {
+    const email = params.email;
+
+    return await this.connection.transaction(async (transaction) => {
+      const userRepository = transaction.getRepository(User);
+
+      const user = await userRepository.findOne({
+        where: { email },
+        select: ['id'],
+      });
+
+      if (user) {
+        throw new CustomHttpException(ErrorCode.Email_Already_exist, 'Email already exist');
+      }
+
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+
+      const data = {
+        email,
+        status: CommonStatus.INACTIVE,
+        roleId: UserType.CLIENT,
+        verificationCode: code,
+      };
+
+      const newUser = await userRepository.save(data);
+      this.mailService.sendVerificationCode(email, code);
+
+      return email;
     });
   }
 

@@ -19,11 +19,11 @@ import {
   HttpStatus,
   HttpCode,
 } from '@nestjs/common';
-import { registerSchema } from 'class-validator';
-import { loginSchema } from './client.schema';
+import { loginSchema, registerSchema } from './client.schema';
 import { ClientService } from './client.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SendVerificationCodeDTO } from './dto/sendVerificationCode.dto';
 
 @Controller('client')
 export class AuthController {
@@ -47,9 +47,13 @@ export class AuthController {
   @Public()
   @Post('/register')
   async register(@Body() body: RegisterDto) {
-    validate(registerSchema, body);
-
+    // validate(registerSchema, body);
     return await this.authService.register(body);
+  }
+
+  @Post('/send-mail')
+  confirm(@Body() body: SendVerificationCodeDTO) {
+    return this.authService.sendVerificationCode(body);
   }
 
   @Patch(':id')
