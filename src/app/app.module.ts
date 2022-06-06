@@ -5,10 +5,12 @@ import { LoggerMiddleware } from '$core/middlewares/logger.middleware';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ClientModule } from './client/client.module';
 import { JwtAuthGuard } from './shared/auth/jwt-auth.guard';
 import { RolesGuard } from './shared/auth/role.guard';
 import { SharedModule } from './shared/shared.module';
+import { TasksModule } from './shared/scheduleTasks/task.module';
 
 @Module({
   providers: [
@@ -33,7 +35,7 @@ import { SharedModule } from './shared/shared.module';
       useClass: CustomerValidationPipe,
     },
   ],
-  imports: [ClientModule, SharedModule, TypeOrmModule.forRoot()],
+  imports: [ClientModule, SharedModule, TasksModule, TypeOrmModule.forRoot(), ScheduleModule.forRoot()],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

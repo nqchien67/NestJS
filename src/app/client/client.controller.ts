@@ -1,29 +1,13 @@
-import { JwtAuthGuard } from '$app/shared/auth/jwt-auth.guard';
 import { CustomParseIntPipe } from '$core/customer-pipe/customer.pipe';
 import { Public } from '$core/decorators/public.decorator';
-import { Roles } from '$core/decorators/role.decorator';
 import { User } from '$core/decorators/user.deorator';
-import { CustomHttpException } from '$helpers/exception';
 import { validate } from '$helpers/validate';
-import { Action, ErrorCode, Role } from '$types/enums';
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  BadRequestException,
-  UseGuards,
-  HttpStatus,
-  HttpCode,
-} from '@nestjs/common';
-import { loginSchema, registerSchema } from './client.schema';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { loginSchema } from './client.schema';
 import { ClientService } from './client.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { SendVerificationCodeDTO } from './dto/sendVerificationCode.dto';
+import { VerifyEmailDto } from './dto/verifyEmail.dto';
 
 @Controller('client')
 export class AuthController {
@@ -45,15 +29,16 @@ export class AuthController {
   }
 
   @Public()
-  @Post('/register')
-  async register(@Body() body: RegisterDto) {
+  @Post('/verify-email')
+  async verifyEmail(@Body() body: VerifyEmailDto) {
     // validate(registerSchema, body);
-    return await this.authService.register(body);
+    return await this.authService.verifyEmail(body);
   }
 
-  @Post('/send-mail')
-  confirm(@Body() body: SendVerificationCodeDTO) {
-    return this.authService.sendVerificationCode(body);
+  @Public()
+  @Post('/register')
+  register(@Body() body: RegisterDto) {
+    return this.authService.register(body);
   }
 
   @Patch(':id')

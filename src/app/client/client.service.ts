@@ -7,23 +7,50 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Connection, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-
 import { LoginDto } from './dto/login.dto';
+import { MailService } from '$app/shared/mail/mail.service';
+import { VerifyEmailDto } from './dto/verifyEmail.dto';
 import { RegisterDto } from './dto/register.dto';
-import { MailService } from '$app/shared/send-mail/mail.service';
-import { SendVerificationCodeDTO } from './dto/sendVerificationCode.dto';
 
 @Injectable()
 export class ClientService {
   constructor(
     private readonly connection: Connection,
     private readonly authService: AuthService,
-    private readonly mailService: MailService, // @InjectRepository(User) // private readonly userRepository: Repository<User>,
+    private readonly mailService: MailService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
   async login(params: LoginDto) {
     const { email, password } = params;
 
+    return this.connection.transaction(async (transaction) => {
+      const userRepository = transaction.getRepository(User);
+
+      const user = await userRepository.findOne({
+        where: { email },
+        select: ['id', 'name', 'status', 'password', 'isSuperAdmin', 'userType'],
+      });
+
+      if (!user) {
+        throw new CustomHttpException(ErrorCode.Not_Found, 'Not found user!');
+      }
+      if ((await user).status === CommonStatus.INACTIVE) {
+        throw new CustomHttpException(ErrorCode.User_In_Active, 'User inactive');
+      }
+
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      await userRepository.update({ email }, { verificationCode: code });
+
+      this.mailService.sendMail(email, 'Account Verification', 'verify-login', {
+        name: user.name || email,
+        code,
+      });
+
+      return email;
+    });
+
+    /*
     return await this.connection.transaction(async (transaction) => {
       const userRepository = transaction.getRepository(User);
 
@@ -47,39 +74,10 @@ export class ClientService {
 
       // TODO return token
       return await this.generateToken(userRepository, user);
-    });
+    });*/
   }
 
   async register(params: RegisterDto) {
-    const { email, password, code } = params;
-
-    return await this.connection.transaction(async (transaction) => {
-      const userRepository = transaction.getRepository(User);
-
-      const user = await userRepository.findOne({
-        where: { email },
-        select: ['verificationCode'],
-      });
-
-      if (user.verificationCode !== code) {
-        throw new CustomHttpException(ErrorCode.Auth_Failed, 'Auth_Failed');
-      }
-
-      const hashPassword = await bcrypt.hash(password, config.AUTH.BCRYPT_HASH_ROUNDS);
-      userRepository.update(
-        { email },
-        {
-          password: hashPassword,
-          verificationCode: '',
-          status: CommonStatus.ACTIVE,
-        },
-      );
-
-      return await this.generateToken(userRepository, user);
-    });
-  }
-
-  async sendVerificationCode(params: SendVerificationCodeDTO) {
     const email = params.email;
 
     return await this.connection.transaction(async (transaction) => {
@@ -95,7 +93,6 @@ export class ClientService {
       }
 
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-
       const data = {
         email,
         status: CommonStatus.INACTIVE,
@@ -103,11 +100,62 @@ export class ClientService {
         verificationCode: code,
       };
 
-      const newUser = await userRepository.save(data);
-      this.mailService.sendVerificationCode(email, code);
+      await userRepository.save(data);
+      this.mailService.sendMail(email, 'Verify your email address.', 'verify-register', {
+        name: email,
+        code,
+      });
 
       return email;
     });
+  }
+
+  async verifyEmail(params: VerifyEmailDto) {
+    const { email, password, code } = params;
+
+    return await this.connection.transaction(async (transaction) => {
+      const userRepository = transaction.getRepository(User);
+
+      const user = await userRepository.findOne({
+        where: { email },
+        select: ['verificationCode', 'status', 'password'],
+      });
+
+      if (!user) {
+        throw new CustomHttpException(ErrorCode.Not_Found, 'User not found');
+      }
+
+      if (user.verificationCode !== code) {
+        throw new CustomHttpException(ErrorCode.Auth_Failed, 'Auth_Failed');
+      }
+
+      if (user.status === CommonStatus.INACTIVE) {
+        await this.verifyRegister(userRepository, email, password);
+      } else {
+        await this.verifyLogin(password, user.password);
+      }
+
+      return this.generateToken(userRepository, user);
+    });
+  }
+
+  private async verifyRegister(userRepository: Repository<User>, email: string, password: string) {
+    const hashPassword = await bcrypt.hash(password, config.AUTH.BCRYPT_HASH_ROUNDS);
+    await userRepository.update(
+      { email },
+      {
+        password: hashPassword,
+        verificationCode: '',
+        status: CommonStatus.ACTIVE,
+      },
+    );
+  }
+
+  private async verifyLogin(password: string, storedPassword: string) {
+    const isPasswordCorrect = await bcrypt.compare(password, storedPassword);
+    if (!isPasswordCorrect) {
+      throw new CustomHttpException(ErrorCode.Auth_Failed);
+    }
   }
 
   async generateToken(userRepository: Repository<User>, user: User) {
@@ -128,9 +176,12 @@ export class ClientService {
     return { token, refreshToken: user.refreshToken };
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async findAllEmail() {
+    const users = await this.userRepository.find({ select: ['email'] });
+    return users.map((user) => user.email);
   }
+
+  findAll() {}
 
   findOne(id: number) {
     return `This action returns a #${id} auth`;
