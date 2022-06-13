@@ -17,7 +17,7 @@ export class CustomParseIntPipe implements PipeTransform<string> {
     const isNumeric = ['string', 'number'].includes(typeof value) && !isNaN(parseFloat(value)) && isFinite(value);
 
     if (!isNumeric) {
-      throw new CustomHttpException(ErrorCode.Not_Found, 'dongu do an hai');
+      throw new CustomHttpException(ErrorCode.Not_Found, 'do ngu do an hai');
     }
 
     return parseInt(value, 10);

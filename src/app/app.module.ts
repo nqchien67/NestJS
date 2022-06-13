@@ -11,6 +11,7 @@ import { JwtAuthGuard } from './shared/auth/jwt-auth.guard';
 import { RolesGuard } from './shared/auth/role.guard';
 import { SharedModule } from './shared/shared.module';
 import { TasksModule } from './shared/scheduleTasks/task.module';
+import { SmsModule } from './sms/sms.module';
 
 @Module({
   providers: [
@@ -35,7 +36,7 @@ import { TasksModule } from './shared/scheduleTasks/task.module';
       useClass: CustomerValidationPipe,
     },
   ],
-  imports: [ClientModule, SharedModule, TasksModule, TypeOrmModule.forRoot(), ScheduleModule.forRoot()],
+  imports: [ClientModule, SharedModule, TasksModule, SmsModule, TypeOrmModule.forRoot(), ScheduleModule.forRoot()],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

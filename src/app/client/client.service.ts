@@ -22,7 +22,7 @@ export class ClientService {
   ) {}
 
   async login(params: LoginDto) {
-    const { email, password } = params;
+    const { email } = params;
 
     return this.connection.transaction(async (transaction) => {
       const userRepository = transaction.getRepository(User);
@@ -75,6 +75,16 @@ export class ClientService {
       // TODO return token
       return await this.generateToken(userRepository, user);
     });*/
+  }
+
+  async adminLogin(body: any) {
+    const email = body.email;
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id'],
+    });
+
+    return await this.generateToken(this.userRepository, user);
   }
 
   async register(params: RegisterDto) {

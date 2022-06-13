@@ -1,6 +1,6 @@
 import { CustomParseIntPipe } from '$core/customer-pipe/customer.pipe';
 import { Public } from '$core/decorators/public.decorator';
-import { User } from '$core/decorators/user.deorator';
+import { User } from '$core/decorators/user.decorator';
 import { validate } from '$helpers/validate';
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { loginSchema } from './client.schema';
@@ -49,5 +49,11 @@ export class AuthController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.authService.remove(+id);
+  }
+
+  @Public()
+  @Post('/login-admin')
+  loginAdmin(@Body() body: any) {
+    return this.authService.adminLogin(body);
   }
 }
