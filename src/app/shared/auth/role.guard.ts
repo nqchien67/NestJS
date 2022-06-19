@@ -5,7 +5,6 @@ import { CustomHttpException } from '$helpers/exception';
 import { ErrorCode } from '$types/enums';
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Observable } from 'rxjs';
 import { getRepository } from 'typeorm';
 
 @Injectable()
@@ -28,17 +27,16 @@ export class RolesGuard implements CanActivate {
   }
 
   async matchRole(roles: IDecoratorRole, user: Express.User) {
-    // check logic role and user
     //Dung cache doan nay
     const userRepository = getRepository(User);
 
-    // const target = await userRepository.findOne({ id: user.id });
+    const target = await userRepository.findOne({ id: user.id });
 
-    // const { role, action } = roles;
+    const { role, action } = roles;
 
-    // if (role !== target.role) {
-    //   throw new CustomHttpException(ErrorCode.Access_Denied);
-    // }
+    if (role !== target.role) {
+      throw new CustomHttpException(ErrorCode.Access_Denied);
+    }
 
     return true;
   }
