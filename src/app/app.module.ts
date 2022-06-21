@@ -6,12 +6,14 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bull';
 import { ClientModule } from './client/client.module';
 import { JwtAuthGuard } from './shared/auth/jwt-auth.guard';
 import { RolesGuard } from './shared/auth/role.guard';
 import { SharedModule } from './shared/shared.module';
 import { TasksModule } from './shared/scheduleTasks/task.module';
 import { SmsModule } from './sms/sms.module';
+import config from '$config';
 
 @Module({
   providers: [
@@ -36,7 +38,20 @@ import { SmsModule } from './sms/sms.module';
       useClass: CustomerValidationPipe,
     },
   ],
-  imports: [ClientModule, SharedModule, TasksModule, SmsModule, TypeOrmModule.forRoot(), ScheduleModule.forRoot()],
+  imports: [
+    ClientModule,
+    SharedModule,
+    TasksModule,
+    SmsModule,
+    TypeOrmModule.forRoot(),
+    ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      redis: {
+        host: config.REDIS.HOST,
+        port: config.REDIS.PORT,
+      },
+    }),
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

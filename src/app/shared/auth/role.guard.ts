@@ -30,7 +30,10 @@ export class RolesGuard implements CanActivate {
     //Dung cache doan nay
     const userRepository = getRepository(User);
 
-    const target = await userRepository.findOne({ id: user.id });
+    const target = await userRepository.findOne({
+      where: { id: user.id },
+      select: ['role'],
+    });
 
     const { role, action } = roles;
 
